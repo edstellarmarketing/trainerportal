@@ -8,6 +8,12 @@ const links = [
     color: "bg-blue-600",
   },
   {
+    title: "Request a Trainer",
+    description: "Submit a training enquiry — get matched within 48 hours",
+    href: "/enquiry",
+    color: "bg-teal-600",
+  },
+  {
     title: "Trainer Login",
     description: "Sign in with magic link (for approved trainers)",
     href: "/login/trainer",
