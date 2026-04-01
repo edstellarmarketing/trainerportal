@@ -15,6 +15,34 @@ export async function POST(request: Request) {
     const data = JSON.parse(rawData);
     const supabase = createAdminClient();
 
+    // Fetch ALL domains FIRST (before any inserts) via direct REST API
+    let allDomains: { id: string; name: string }[] = [];
+    let domainFetchErr: string | null = null;
+    try {
+      const domainRes = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/domains?select=id,name`,
+        {
+          headers: {
+            "apikey": process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+          },
+        }
+      );
+      if (domainRes.ok) {
+        allDomains = await domainRes.json();
+      } else {
+        domainFetchErr = `REST ${domainRes.status}: ${await domainRes.text()}`;
+      }
+    } catch (e) {
+      domainFetchErr = e instanceof Error ? e.message : String(e);
+    }
+
+    // Build name-to-id map
+    const nameToId = new Map<string, string>();
+    for (const d of allDomains) {
+      nameToId.set(d.name.toLowerCase(), d.id);
+    }
+
     // Upload files to Supabase Storage
     const headshot = formData.get("headshot") as File | null;
     const sampleOutline = formData.get("sampleOutline") as File | null;
@@ -120,26 +148,12 @@ export async function POST(request: Request) {
 
     const trainerId = trainer.id;
 
-    // Fetch ALL domains from DB
-    const { data: allDomains, error: domainFetchErr } = await supabase
-      .from("domains")
-      .select("id, name")
-      .limit(500);
-
     const domainDebug: Record<string, unknown> = {
-      domainFetchError: domainFetchErr?.message || null,
-      totalDomainsInDB: allDomains?.length || 0,
+      domainFetchError: domainFetchErr,
+      totalDomainsInDB: allDomains.length,
       rawPrimary: data.primaryDomains,
       rawSecondary: data.secondaryDomains,
     };
-
-    // Build name-to-id map
-    const nameToId = new Map<string, string>();
-    if (allDomains) {
-      for (const d of allDomains) {
-        nameToId.set(d.name.toLowerCase(), d.id);
-      }
-    }
 
     // Resolve names to IDs
     function resolveIds(names: string[]): string[] {
