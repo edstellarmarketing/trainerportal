@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -151,9 +152,17 @@ export default function TrainerDetailPage() {
             <p className="text-sm text-gray-500">{trainer.email}</p>
           </div>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[trainer.status] || "bg-gray-100 text-gray-500"}`}>
-          {trainer.status}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[trainer.status] || "bg-gray-100 text-gray-500"}`}>
+            {trainer.status}
+          </span>
+          <Link
+            href={`/admin/trainers/${trainer.id}/verification`}
+            className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+          >
+            Verification Pipeline
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-6">
