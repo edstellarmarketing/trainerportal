@@ -143,7 +143,7 @@ export async function POST(request: Request) {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-chat-v3-0324:free",
+          model: "deepseek/deepseek-chat-v3-0324",
           max_tokens: 2000,
           messages: [
             {
