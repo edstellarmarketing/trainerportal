@@ -95,3 +95,61 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ success: true });
 }
+
+export async function PUT(request: Request) {
+  const body = await request.json();
+  const { id, ...fields } = body;
+
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  const supabase = createAdminClient();
+
+  const updates: Record<string, unknown> = {};
+  const fieldMap: Record<string, string> = {
+    firstName: "first_name",
+    lastName: "last_name",
+    email: "email",
+    phone: "phone",
+    locationCity: "location_city",
+    locationCountry: "location_country",
+    linkedinUrl: "linkedin_url",
+    bio: "bio",
+    primaryDomains: "primary_domains",
+    secondaryDomains: "secondary_domains",
+    topicsTrained: "topics_trained",
+    yearsOfExperience: "years_of_experience",
+    totalSessionsDelivered: "total_sessions_delivered",
+    preferredGroupSizeMin: "preferred_group_size_min",
+    preferredGroupSizeMax: "preferred_group_size_max",
+    deliveryFormats: "delivery_formats",
+    certifications: "certifications",
+    sampleVideoUrl: "sample_video_url",
+    dayRateUsd: "day_rate_usd",
+    hourlyRateUsd: "hourly_rate_usd",
+    rateNotes: "rate_notes",
+  };
+
+  for (const [key, value] of Object.entries(fields)) {
+    const dbCol = fieldMap[key];
+    if (dbCol) {
+      updates[dbCol] = value === "" ? null : value;
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from("trainers")
+    .update(updates)
+    .eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}
