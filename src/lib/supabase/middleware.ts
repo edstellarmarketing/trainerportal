@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const PROTECTED_ROUTES = ["/admin", "/dashboard"];
+const AUTH_ROUTES = ["/login", "/auth"];
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -29,8 +32,33 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh the auth token
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+
+  // Redirect unauthenticated users away from protected routes
+  const isProtected = PROTECTED_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
+  if (isProtected && !user) {
+    const redirectTo = pathname.startsWith("/admin")
+      ? "/login/admin"
+      : "/login/trainer";
+    const url = request.nextUrl.clone();
+    url.pathname = redirectTo;
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect authenticated users away from auth pages
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  if (isAuthRoute && user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
