@@ -1,5 +1,3 @@
-import { RegistrationProvider } from "@/lib/registration-context";
-
 export const metadata = {
   title: "Trainer Registration | Edstellar",
   description: "Register as a trainer on the Edstellar platform",
@@ -10,5 +8,5 @@ export default function RegisterLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <RegistrationProvider>{children}</RegistrationProvider>;
+  return <>{children}</>;
 }

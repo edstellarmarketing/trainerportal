@@ -1,0 +1,71 @@
+================================================================================
+                        SAMPLE TRAINER RESUME
+                  (Download & fill in your details)
+================================================================================
+
+PERSONAL INFORMATION
+--------------------
+Full Name       : John Michael Doe
+Email           : john.doe@email.com
+Phone           : +1 (555) 123-4567
+City            : San Francisco
+Country         : United States
+LinkedIn        : https://linkedin.com/in/johndoe
+
+PROFESSIONAL SUMMARY
+---------------------
+Experienced corporate trainer with 12+ years in cloud computing, DevOps, and
+cybersecurity training. Delivered 300+ sessions for Fortune 500 companies
+across 15 countries. Passionate about hands-on, lab-based learning that drives
+real-world outcomes.
+
+TRAINING DOMAINS
+-----------------
+Primary   : Cloud Computing, Amazon Web Services (AWS), DevOps
+Secondary : Cybersecurity, Kubernetes & Containers, Python Programming
+
+EXPERIENCE
+----------
+Years of Training Experience : 12
+Total Sessions Delivered     : 320
+Preferred Group Size         : 10 - 30 participants
+Delivery Formats             : In-Person, Virtual, Hybrid
+
+TOPICS TRAINED
+--------------
+- AWS Solutions Architecture
+- CI/CD Pipelines with Jenkins & GitHub Actions
+- Docker & Kubernetes for DevOps
+- Cloud Security Best Practices
+- Infrastructure as Code (Terraform)
+- Python for Data Engineering
+
+CERTIFICATIONS
+--------------
+1. AWS Solutions Architect Professional
+   Issuing Org  : Amazon Web Services
+   Issue Date   : 2023-06-15
+   Expiry Date  : 2026-06-15
+   Credential ID: AWS-SAP-12345
+
+2. Certified Kubernetes Administrator (CKA)
+   Issuing Org  : Cloud Native Computing Foundation
+   Issue Date   : 2024-01-10
+   Expiry Date  : 2027-01-10
+   Credential ID: CKA-67890
+
+3. Certified Information Systems Security Professional (CISSP)
+   Issuing Org  : ISC2
+   Issue Date   : 2022-03-20
+   Credential ID: CISSP-11223
+
+RATE CARD
+---------
+Day Rate (USD)    : 1500
+Hourly Rate (USD) : 200
+Notes             : Travel expenses billed separately for on-site engagements.
+                    10% discount for 5+ day bookings.
+
+================================================================================
+  Save this file as PDF or DOCX and upload it to register as an Edstellar trainer.
+================================================================================
