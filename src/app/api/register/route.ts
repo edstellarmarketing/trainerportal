@@ -120,11 +120,11 @@ export async function POST(request: Request) {
 
     const trainerId = trainer.id;
 
-    // Fetch ALL domains from DB upfront using a fresh client
-    const adminClient = createAdminClient();
-    const { data: allDomains, error: domainFetchErr } = await adminClient
+    // Fetch ALL domains from DB
+    const { data: allDomains, error: domainFetchErr } = await supabase
       .from("domains")
-      .select("id, name");
+      .select("id, name")
+      .limit(500);
 
     const domainDebug: Record<string, unknown> = {
       domainFetchError: domainFetchErr?.message || null,
@@ -159,7 +159,7 @@ export async function POST(request: Request) {
     const insertErrors: string[] = [];
 
     if (primaryIds.length > 0) {
-      const { error: priErr } = await adminClient
+      const { error: priErr } = await supabase
         .from("trainer_domains")
         .insert(primaryIds.map((id) => ({
           trainer_id: trainerId,
@@ -170,7 +170,7 @@ export async function POST(request: Request) {
     }
 
     if (secondaryIds.length > 0) {
-      const { error: secErr } = await adminClient
+      const { error: secErr } = await supabase
         .from("trainer_domains")
         .insert(secondaryIds.map((id) => ({
           trainer_id: trainerId,
