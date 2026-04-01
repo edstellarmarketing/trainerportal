@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 
 export default function TrainerLoginPage() {
@@ -14,22 +13,30 @@ export default function TrainerLoginPage() {
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?redirect=/dashboard`,
-      },
-    });
+    try {
+      const res = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          redirectTo: `${window.location.origin}/auth/callback?redirect=/dashboard`,
+        }),
+      });
 
-    if (error) {
-      setError(error.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to send magic link");
+        setLoading(false);
+        return;
+      }
+
+      setSent(true);
       setLoading(false);
-      return;
+    } catch {
+      setError("Connection error. Please try again.");
+      setLoading(false);
     }
-
-    setSent(true);
-    setLoading(false);
   }
 
   if (sent) {
