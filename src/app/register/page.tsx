@@ -83,7 +83,8 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         const body = await res.json();
-        throw new Error(body.error || "Failed to parse resume");
+        const debugInfo = body.debug ? ` (${typeof body.debug === 'string' ? body.debug.slice(0, 200) : JSON.stringify(body.debug)})` : "";
+        throw new Error((body.error || "Failed to parse resume") + debugInfo);
       }
 
       const { data: parsed } = await res.json();
