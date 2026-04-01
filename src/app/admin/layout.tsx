@@ -17,7 +17,7 @@ export default function AdminLayout({
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login/admin");
+    window.location.href = "/login/admin";
   }
 
   return (

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function POST() {
   const response = NextResponse.json({ success: true });
-  response.cookies.delete("sb-access-token");
-  response.cookies.delete("sb-refresh-token");
+  response.cookies.set("sb-access-token", "", { path: "/", maxAge: 0 });
+  response.cookies.set("sb-refresh-token", "", { path: "/", maxAge: 0 });
   return response;
 }
