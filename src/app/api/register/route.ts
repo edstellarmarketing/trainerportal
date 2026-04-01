@@ -131,17 +131,27 @@ export async function POST(request: Request) {
       if (areUuids) return values;
 
       // Values are domain names — look up IDs
-      const { data: domainRows } = await supabase
+      const { data: domainRows, error: domainErr } = await supabase
         .from("domains")
-        .select("id, name")
-        .in("name", values);
+        .select("id, name");
 
-      if (!domainRows) return [];
+      console.log("Domain lookup - input names:", values);
+      console.log("Domain lookup - total domains in DB:", domainRows?.length);
+      if (domainErr) console.error("Domain lookup error:", domainErr);
+
+      if (!domainRows || domainRows.length === 0) return [];
 
       const nameToId = new Map(domainRows.map((d) => [d.name.toLowerCase(), d.id]));
-      return values
-        .map((name) => nameToId.get(name.toLowerCase()))
+      const resolved = values
+        .map((name) => {
+          const id = nameToId.get(name.toLowerCase());
+          if (!id) console.log(`Domain not found: "${name}"`);
+          return id;
+        })
         .filter((id): id is string => !!id);
+
+      console.log("Domain lookup - resolved:", resolved.length, "of", values.length);
+      return resolved;
     }
 
     // Insert trainer_domains (primary)
