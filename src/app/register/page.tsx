@@ -205,13 +205,7 @@ export default function RegisterPage() {
     try {
       const payload = new FormData();
 
-      const primaryIds = data.primaryDomains
-        .map(domainNameToId)
-        .filter(Boolean);
-      const secondaryIds = data.secondaryDomains
-        .map(domainNameToId)
-        .filter(Boolean);
-
+      // Send raw domain names — server resolves them to IDs
       const jsonData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -221,8 +215,8 @@ export default function RegisterPage() {
         locationCountry: data.locationCountry,
         linkedinUrl: data.linkedinUrl,
         bio: data.bio,
-        primaryDomains: primaryIds,
-        secondaryDomains: secondaryIds,
+        primaryDomains: data.primaryDomains,
+        secondaryDomains: data.secondaryDomains,
         yearsOfExperience: data.yearsOfExperience ?? "",
         certifications: data.certifications,
         topicsTrained: data.topicsTrained,
