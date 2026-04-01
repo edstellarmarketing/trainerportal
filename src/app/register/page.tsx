@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { DELIVERY_FORMAT_OPTIONS } from "@/lib/registration-types";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -53,16 +52,18 @@ export default function RegisterPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Fetch domains for mapping
+  // Fetch domains via server-side API (avoids mixed content issues)
   useEffect(() => {
     async function fetchDomains() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("domains")
-        .select("id, name, category")
-        .eq("is_active", true)
-        .order("display_order");
-      setDomains(data || []);
+      try {
+        const res = await fetch("/api/domains");
+        if (res.ok) {
+          const data = await res.json();
+          setDomains(data || []);
+        }
+      } catch {
+        console.error("Failed to fetch domains");
+      }
     }
     fetchDomains();
   }, []);
