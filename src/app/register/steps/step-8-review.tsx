@@ -178,9 +178,9 @@ function Section({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex py-1">
-      <span className="text-sm text-gray-500 w-36 shrink-0">{label}</span>
-      <span className="text-sm text-gray-900 break-words">{value}</span>
+    <div className="flex flex-col sm:flex-row py-1 gap-0.5 sm:gap-0">
+      <span className="text-sm text-gray-500 sm:w-36 shrink-0 font-medium sm:font-normal">{label}</span>
+      <span className="text-sm text-gray-900 break-words min-w-0">{value}</span>
     </div>
   );
 }

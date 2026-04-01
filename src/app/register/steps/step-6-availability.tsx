@@ -134,9 +134,9 @@ export function Step6Availability() {
             {formData.availabilitySlots.map((slot) => (
               <div
                 key={slot.id}
-                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 hover:bg-gray-50 gap-2"
               >
-                <div className="flex items-center gap-4 text-sm">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
                   <span className="font-medium text-gray-900">
                     {new Date(slot.date + "T00:00:00").toLocaleDateString(
                       "en-US",

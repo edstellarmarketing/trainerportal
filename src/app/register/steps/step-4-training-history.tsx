@@ -125,7 +125,7 @@ export function Step4TrainingHistory() {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Preferred Group Size
         </label>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <input
             type="number"
             min={1}
@@ -136,7 +136,7 @@ export function Step4TrainingHistory() {
                   e.target.value === "" ? "" : parseInt(e.target.value),
               })
             }
-            className="w-28 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-24 sm:w-28 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
             placeholder="Min"
           />
           <span className="text-gray-400">to</span>
