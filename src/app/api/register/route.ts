@@ -120,9 +120,34 @@ export async function POST(request: Request) {
 
     const trainerId = trainer.id;
 
+    // Resolve domain values — could be UUIDs or domain names
+    async function resolveDomainIds(values: string[]): Promise<string[]> {
+      if (!values || values.length === 0) return [];
+
+      // Check if values look like UUIDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const areUuids = values.every((v) => uuidRegex.test(v));
+
+      if (areUuids) return values;
+
+      // Values are domain names — look up IDs
+      const { data: domainRows } = await supabase
+        .from("domains")
+        .select("id, name")
+        .in("name", values);
+
+      if (!domainRows) return [];
+
+      const nameToId = new Map(domainRows.map((d) => [d.name.toLowerCase(), d.id]));
+      return values
+        .map((name) => nameToId.get(name.toLowerCase()))
+        .filter((id): id is string => !!id);
+    }
+
     // Insert trainer_domains (primary)
-    if (data.primaryDomains?.length > 0) {
-      const primaryRows = data.primaryDomains.map((domainId: string) => ({
+    const primaryIds = await resolveDomainIds(data.primaryDomains || []);
+    if (primaryIds.length > 0) {
+      const primaryRows = primaryIds.map((domainId: string) => ({
         trainer_id: trainerId,
         domain_id: domainId,
         is_primary: true,
@@ -131,8 +156,9 @@ export async function POST(request: Request) {
     }
 
     // Insert trainer_domains (secondary)
-    if (data.secondaryDomains?.length > 0) {
-      const secondaryRows = data.secondaryDomains.map((domainId: string) => ({
+    const secondaryIds = await resolveDomainIds(data.secondaryDomains || []);
+    if (secondaryIds.length > 0) {
+      const secondaryRows = secondaryIds.map((domainId: string) => ({
         trainer_id: trainerId,
         domain_id: domainId,
         is_primary: false,
