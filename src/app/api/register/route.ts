@@ -15,34 +15,6 @@ export async function POST(request: Request) {
     const data = JSON.parse(rawData);
     const supabase = createAdminClient();
 
-    // Fetch ALL domains FIRST (before any inserts) via direct REST API
-    let allDomains: { id: string; name: string }[] = [];
-    let domainFetchErr: string | null = null;
-    try {
-      const domainRes = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/domains?select=id,name`,
-        {
-          headers: {
-            "apikey": process.env.SUPABASE_SERVICE_ROLE_KEY!,
-            "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-          },
-        }
-      );
-      if (domainRes.ok) {
-        allDomains = await domainRes.json();
-      } else {
-        domainFetchErr = `REST ${domainRes.status}: ${await domainRes.text()}`;
-      }
-    } catch (e) {
-      domainFetchErr = e instanceof Error ? e.message : String(e);
-    }
-
-    // Build name-to-id map
-    const nameToId = new Map<string, string>();
-    for (const d of allDomains) {
-      nameToId.set(d.name.toLowerCase(), d.id);
-    }
-
     // Upload files to Supabase Storage
     const headshot = formData.get("headshot") as File | null;
     const sampleOutline = formData.get("sampleOutline") as File | null;
@@ -97,7 +69,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Insert trainer record
+    // Insert trainer record with domains, certs, topics as direct fields
     const { data: trainer, error: trainerError } = await supabase
       .from("trainers")
       .insert({
@@ -110,6 +82,15 @@ export async function POST(request: Request) {
         linkedin_url: data.linkedinUrl || null,
         bio: data.bio || null,
         headshot_url: headshotUrl,
+
+        // Domains stored directly as text arrays
+        primary_domains: data.primaryDomains || [],
+        secondary_domains: data.secondaryDomains || [],
+
+        // Topics
+        topics_trained: data.topicsTrained || [],
+
+        // Experience
         years_of_experience:
           data.yearsOfExperience !== "" ? data.yearsOfExperience : null,
         total_sessions_delivered:
@@ -124,14 +105,22 @@ export async function POST(request: Request) {
           data.preferredGroupSizeMax !== ""
             ? data.preferredGroupSizeMax
             : null,
-        delivery_formats: data.deliveryFormats,
+        delivery_formats: data.deliveryFormats || [],
+
+        // Certifications stored as JSONB
+        certifications: data.certifications || [],
+
+        // Content
         sample_outline_url: sampleOutlineUrl,
         sample_slides_url: sampleSlidesUrl,
         sample_video_url: data.sampleVideoUrl || null,
-        availability: data.availabilitySlots,
+
+        // Availability & rates
+        availability: data.availabilitySlots || [],
         day_rate_usd: data.dayRateUsd !== "" ? data.dayRateUsd : null,
         hourly_rate_usd: data.hourlyRateUsd !== "" ? data.hourlyRateUsd : null,
         rate_notes: data.rateNotes || null,
+
         status: "pending",
         submitted_at: new Date().toISOString(),
       })
@@ -148,89 +137,7 @@ export async function POST(request: Request) {
 
     const trainerId = trainer.id;
 
-    const domainDebug: Record<string, unknown> = {
-      domainFetchError: domainFetchErr,
-      totalDomainsInDB: allDomains.length,
-      rawPrimary: data.primaryDomains,
-      rawSecondary: data.secondaryDomains,
-    };
-
-    // Resolve names to IDs
-    function resolveIds(names: string[]): string[] {
-      if (!names || names.length === 0) return [];
-      return names
-        .map((name) => nameToId.get(name.toLowerCase()) || null)
-        .filter((id): id is string => id !== null);
-    }
-
-    const primaryIds = resolveIds(data.primaryDomains || []);
-    const secondaryIds = resolveIds(data.secondaryDomains || []);
-
-    domainDebug.resolvedPrimaryIds = primaryIds;
-    domainDebug.resolvedSecondaryIds = secondaryIds;
-
-    // Insert trainer_domains
-    const insertErrors: string[] = [];
-
-    if (primaryIds.length > 0) {
-      const { error: priErr } = await supabase
-        .from("trainer_domains")
-        .insert(primaryIds.map((id) => ({
-          trainer_id: trainerId,
-          domain_id: id,
-          is_primary: true,
-        })));
-      if (priErr) insertErrors.push("primary: " + priErr.message);
-    }
-
-    if (secondaryIds.length > 0) {
-      const { error: secErr } = await supabase
-        .from("trainer_domains")
-        .insert(secondaryIds.map((id) => ({
-          trainer_id: trainerId,
-          domain_id: id,
-          is_primary: false,
-        })));
-      if (secErr) insertErrors.push("secondary: " + secErr.message);
-    }
-
-    domainDebug.insertErrors = insertErrors;
-
-    // Insert certifications
-    if (data.certifications?.length > 0) {
-      for (let i = 0; i < data.certifications.length; i++) {
-        const cert = data.certifications[i];
-        let documentUrl: string | null = null;
-
-        const certFile = formData.get(`certDocument_${i}`) as File | null;
-        if (certFile && certFile.size > 0) {
-          const ext = certFile.name.split(".").pop();
-          const path = `trainers/${emailSlug}/cert_${i}_${timestamp}.${ext}`;
-          const { error } = await supabase.storage
-            .from("uploads")
-            .upload(path, certFile);
-          if (!error) {
-            const { data: urlData } = supabase.storage
-              .from("uploads")
-              .getPublicUrl(path);
-            documentUrl = urlData.publicUrl;
-          }
-        }
-
-        await supabase.from("certifications").insert({
-          trainer_id: trainerId,
-          name: cert.name,
-          issuing_organization: cert.issuingOrganization || null,
-          issue_date: cert.issueDate || null,
-          expiry_date: cert.expiryDate || null,
-          credential_id: cert.credentialId || null,
-          credential_url: cert.credentialUrl || null,
-          document_url: documentUrl,
-        });
-      }
-    }
-
-    // Create initial verification step (step 1: profile_screening)
+    // Create initial verification step
     await supabase.from("verification_steps").insert({
       trainer_id: trainerId,
       step_number: 1,
@@ -238,11 +145,7 @@ export async function POST(request: Request) {
       status: "pending",
     });
 
-    return NextResponse.json({
-      success: true,
-      trainerId,
-      debug: domainDebug,
-    });
+    return NextResponse.json({ success: true, trainerId });
   } catch (err) {
     console.error("Registration error:", err);
     return NextResponse.json(

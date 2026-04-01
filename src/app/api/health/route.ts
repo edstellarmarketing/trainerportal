@@ -4,8 +4,6 @@ import { NextResponse } from "next/server";
 const EXPECTED_TABLES = [
   "trainers",
   "domains",
-  "trainer_domains",
-  "certifications",
   "verification_steps",
   "sessions",
   "enquiries",
