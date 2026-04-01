@@ -1,48 +1,19 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED_ROUTES = ["/admin", "/dashboard"];
-const AUTH_ROUTES = ["/login", "/auth"];
+const AUTH_ROUTES = ["/login"];
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const pathname = request.nextUrl.pathname;
+
+  // Check for auth token cookie (set by /api/auth/login)
+  const hasSession = request.cookies.has("sb-access-token");
 
   // Redirect unauthenticated users away from protected routes
   const isProtected = PROTECTED_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
-  if (isProtected && !user) {
+  if (isProtected && !hasSession) {
     const redirectTo = pathname.startsWith("/admin")
       ? "/login/admin"
       : "/login/trainer";
@@ -52,13 +23,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from login pages
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
-  if (isAuthRoute && user) {
+  if (isAuthRoute && hasSession) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/admin";
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
