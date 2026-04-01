@@ -20,6 +20,12 @@ const links = [
     color: "bg-gray-800",
   },
   {
+    title: "Admin Dashboard",
+    description: "Manage trainers — view, approve, reject (requires login)",
+    href: "/admin",
+    color: "bg-indigo-600",
+  },
+  {
     title: "Health Check",
     description: "Verify Supabase connection and all 9 tables",
     href: "/api/health",
