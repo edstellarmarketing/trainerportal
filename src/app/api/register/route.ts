@@ -120,70 +120,67 @@ export async function POST(request: Request) {
 
     const trainerId = trainer.id;
 
-    // Resolve domain values — could be UUIDs or domain names
-    async function resolveDomainIds(values: string[]): Promise<string[]> {
-      if (!values || values.length === 0) return [];
+    // Fetch ALL domains from DB upfront using a fresh client
+    const adminClient = createAdminClient();
+    const { data: allDomains, error: domainFetchErr } = await adminClient
+      .from("domains")
+      .select("id, name");
 
-      // Check if values look like UUIDs
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const areUuids = values.every((v) => uuidRegex.test(v));
+    const domainDebug: Record<string, unknown> = {
+      domainFetchError: domainFetchErr?.message || null,
+      totalDomainsInDB: allDomains?.length || 0,
+      rawPrimary: data.primaryDomains,
+      rawSecondary: data.secondaryDomains,
+    };
 
-      if (areUuids) return values;
-
-      // Values are domain names — look up IDs
-      const { data: domainRows, error: domainErr } = await supabase
-        .from("domains")
-        .select("id, name");
-
-      console.log("Domain lookup - input names:", values);
-      console.log("Domain lookup - total domains in DB:", domainRows?.length);
-      if (domainErr) console.error("Domain lookup error:", domainErr);
-
-      if (!domainRows || domainRows.length === 0) return [];
-
-      const nameToId = new Map(domainRows.map((d) => [d.name.toLowerCase(), d.id]));
-      const resolved = values
-        .map((name) => {
-          const id = nameToId.get(name.toLowerCase());
-          if (!id) console.log(`Domain not found: "${name}"`);
-          return id;
-        })
-        .filter((id): id is string => !!id);
-
-      console.log("Domain lookup - resolved:", resolved.length, "of", values.length);
-      return resolved;
+    // Build name-to-id map
+    const nameToId = new Map<string, string>();
+    if (allDomains) {
+      for (const d of allDomains) {
+        nameToId.set(d.name.toLowerCase(), d.id);
+      }
     }
 
-    // Insert trainer_domains (primary)
-    console.log("Raw primaryDomains from request:", JSON.stringify(data.primaryDomains));
-    console.log("Raw secondaryDomains from request:", JSON.stringify(data.secondaryDomains));
+    // Resolve names to IDs
+    function resolveIds(names: string[]): string[] {
+      if (!names || names.length === 0) return [];
+      return names
+        .map((name) => nameToId.get(name.toLowerCase()) || null)
+        .filter((id): id is string => id !== null);
+    }
 
-    const primaryIds = await resolveDomainIds(data.primaryDomains || []);
-    console.log("Resolved primaryIds:", JSON.stringify(primaryIds));
+    const primaryIds = resolveIds(data.primaryDomains || []);
+    const secondaryIds = resolveIds(data.secondaryDomains || []);
+
+    domainDebug.resolvedPrimaryIds = primaryIds;
+    domainDebug.resolvedSecondaryIds = secondaryIds;
+
+    // Insert trainer_domains
+    const insertErrors: string[] = [];
 
     if (primaryIds.length > 0) {
-      const primaryRows = primaryIds.map((domainId: string) => ({
-        trainer_id: trainerId,
-        domain_id: domainId,
-        is_primary: true,
-      }));
-      const { error: priErr } = await supabase.from("trainer_domains").insert(primaryRows);
-      if (priErr) console.error("trainer_domains primary insert error:", priErr);
+      const { error: priErr } = await adminClient
+        .from("trainer_domains")
+        .insert(primaryIds.map((id) => ({
+          trainer_id: trainerId,
+          domain_id: id,
+          is_primary: true,
+        })));
+      if (priErr) insertErrors.push("primary: " + priErr.message);
     }
-
-    // Insert trainer_domains (secondary)
-    const secondaryIds = await resolveDomainIds(data.secondaryDomains || []);
-    console.log("Resolved secondaryIds:", JSON.stringify(secondaryIds));
 
     if (secondaryIds.length > 0) {
-      const secondaryRows = secondaryIds.map((domainId: string) => ({
-        trainer_id: trainerId,
-        domain_id: domainId,
-        is_primary: false,
-      }));
-      const { error: secErr } = await supabase.from("trainer_domains").insert(secondaryRows);
-      if (secErr) console.error("trainer_domains secondary insert error:", secErr);
+      const { error: secErr } = await adminClient
+        .from("trainer_domains")
+        .insert(secondaryIds.map((id) => ({
+          trainer_id: trainerId,
+          domain_id: id,
+          is_primary: false,
+        })));
+      if (secErr) insertErrors.push("secondary: " + secErr.message);
     }
+
+    domainDebug.insertErrors = insertErrors;
 
     // Insert certifications
     if (data.certifications?.length > 0) {
@@ -230,12 +227,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       trainerId,
-      debug: {
-        rawPrimaryDomains: data.primaryDomains,
-        rawSecondaryDomains: data.secondaryDomains,
-        resolvedPrimaryIds: primaryIds,
-        resolvedSecondaryIds: secondaryIds,
-      },
+      debug: domainDebug,
     });
   } catch (err) {
     console.error("Registration error:", err);
