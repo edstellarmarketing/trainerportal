@@ -248,9 +248,15 @@ export default function RegisterPage() {
         body: payload,
       });
 
+      const body = await res.json();
+
       if (!res.ok) {
-        const body = await res.json();
         throw new Error(body.error || "Registration failed");
+      }
+
+      // Log debug info for domain troubleshooting
+      if (body.debug) {
+        console.log("Registration debug:", JSON.stringify(body.debug, null, 2));
       }
 
       router.push("/register/success");

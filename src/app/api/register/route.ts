@@ -145,25 +145,34 @@ export async function POST(request: Request) {
     }
 
     // Insert trainer_domains (primary)
+    console.log("Raw primaryDomains from request:", JSON.stringify(data.primaryDomains));
+    console.log("Raw secondaryDomains from request:", JSON.stringify(data.secondaryDomains));
+
     const primaryIds = await resolveDomainIds(data.primaryDomains || []);
+    console.log("Resolved primaryIds:", JSON.stringify(primaryIds));
+
     if (primaryIds.length > 0) {
       const primaryRows = primaryIds.map((domainId: string) => ({
         trainer_id: trainerId,
         domain_id: domainId,
         is_primary: true,
       }));
-      await supabase.from("trainer_domains").insert(primaryRows);
+      const { error: priErr } = await supabase.from("trainer_domains").insert(primaryRows);
+      if (priErr) console.error("trainer_domains primary insert error:", priErr);
     }
 
     // Insert trainer_domains (secondary)
     const secondaryIds = await resolveDomainIds(data.secondaryDomains || []);
+    console.log("Resolved secondaryIds:", JSON.stringify(secondaryIds));
+
     if (secondaryIds.length > 0) {
       const secondaryRows = secondaryIds.map((domainId: string) => ({
         trainer_id: trainerId,
         domain_id: domainId,
         is_primary: false,
       }));
-      await supabase.from("trainer_domains").insert(secondaryRows);
+      const { error: secErr } = await supabase.from("trainer_domains").insert(secondaryRows);
+      if (secErr) console.error("trainer_domains secondary insert error:", secErr);
     }
 
     // Insert certifications
@@ -208,7 +217,16 @@ export async function POST(request: Request) {
       status: "pending",
     });
 
-    return NextResponse.json({ success: true, trainerId });
+    return NextResponse.json({
+      success: true,
+      trainerId,
+      debug: {
+        rawPrimaryDomains: data.primaryDomains,
+        rawSecondaryDomains: data.secondaryDomains,
+        resolvedPrimaryIds: primaryIds,
+        resolvedSecondaryIds: secondaryIds,
+      },
+    });
   } catch (err) {
     console.error("Registration error:", err);
     return NextResponse.json(
