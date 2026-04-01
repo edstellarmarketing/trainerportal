@@ -17,10 +17,10 @@ export async function GET(request: Request) {
     .from("trainers")
     .select("*", { count: "exact" });
 
-  // Search by name, email, city
+  // Search by name, email, city, or domain
   if (search) {
     query = query.or(
-      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,location_city.ilike.%${search}%`
+      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,location_city.ilike.%${search}%,primary_domains.cs.{"${search}"},secondary_domains.cs.{"${search}"}`
     );
   }
 
