@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import mammoth from "mammoth";
 import { NextResponse } from "next/server";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
@@ -113,27 +112,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use Claude to extract structured data
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+    // Use DeepSeek via OpenRouter to extract structured data
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-chat-v3-0324:free",
+        max_tokens: 2000,
+        messages: [
+          {
+            role: "user",
+            content: EXTRACTION_PROMPT + text,
+          },
+        ],
+      }),
     });
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      messages: [
-        {
-          role: "user",
-          content: EXTRACTION_PROMPT + text,
-        },
-      ],
-    });
+    if (!response.ok) {
+      const errBody = await response.text();
+      console.error("OpenRouter error:", errBody);
+      throw new Error("AI extraction failed");
+    }
 
-    const responseText =
-      message.content[0].type === "text" ? message.content[0].text : "";
+    const result = await response.json();
+    const responseText = result.choices?.[0]?.message?.content || "";
 
-    // Parse the JSON response
-    const parsed = JSON.parse(responseText);
+    // Parse the JSON response (strip markdown fences if present)
+    const jsonStr = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const parsed = JSON.parse(jsonStr);
 
     return NextResponse.json({ data: parsed });
   } catch (err) {
