@@ -47,6 +47,54 @@ Rules:
 Resume text:
 `;
 
+function extractJsonObject(raw: string): string | null {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const content = (fenced ? fenced[1] : trimmed).trim();
+
+  if (content.startsWith("{") && content.endsWith("}")) {
+    return content;
+  }
+
+  const start = content.indexOf("{");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < content.length; i++) {
+    const char = content[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (char === "{") depth++;
+    if (char === "}") {
+      depth--;
+      if (depth === 0) {
+        return content.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
 async function extractPdfText(buffer: Buffer): Promise<string> {
   // Dynamic import to avoid bundling issues in serverless
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -144,7 +192,9 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           model: "deepseek/deepseek-chat-v3-0324",
-          max_tokens: 2000,
+          temperature: 0,
+          max_tokens: 5000,
+          response_format: { type: "json_object" },
           messages: [
             {
               role: "user",
@@ -180,11 +230,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Parse the JSON response (strip markdown fences if present)
-    const jsonStr = responseText
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
+    const jsonStr = extractJsonObject(responseText);
+    if (!jsonStr) {
+      console.error("No JSON object found in AI response:", responseText);
+      return NextResponse.json(
+        {
+          error: "AI response did not include a complete JSON object. Please try again.",
+          debug: responseText.slice(0, 500),
+        },
+        { status: 502 }
+      );
+    }
 
     let parsed;
     try {
